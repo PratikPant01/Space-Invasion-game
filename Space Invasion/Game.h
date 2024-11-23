@@ -1,5 +1,7 @@
 #pragma once
 #include <map>
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <string>
 #include <sstream>
 #include "Player.h"
@@ -21,7 +23,8 @@ private:
         END,
         BACK,
         GAME_OVER,
-        Replay
+        Replay,
+        Credits
     };
 
     // Window
@@ -46,6 +49,9 @@ private:
     sf::Text startTitle;
     sf::Text startInstruction;
     void initStartingScreen();
+
+    sf::SoundBuffer killSoundBuffer;
+    sf::Sound killSound;
 
     // Score
     int highscore;

@@ -84,9 +84,17 @@ Game::Game()
 	this->initStars();
 	this->initTextures();
 	this->initPlayer();
-	
+
 	this->initEnemies();
 	this->initSystems();
+
+	if (!this->killSoundBuffer.loadFromFile("Sound/kill.mp3")) {
+		// Handle error loading sound
+		std::cout << "Error loading kill sound!" << std::endl;
+	}
+	this->killSound.setBuffer(this->killSoundBuffer);
+	this->killSound.setVolume(50.f);
+
 }
 
 Game::~Game()
@@ -194,6 +202,10 @@ void Game::run()
 			if (ui) ui->load_instructions();
 			break;
 
+		case GameState::Credits:
+			if (ui) ui->load_credits();
+			break;
+
 		case GameState::GAME:
 			this->update();
 			this->render();
@@ -213,7 +225,7 @@ void Game::run()
 			if (ui) ui->endgame();
 
 		case GameState::SCORES:
-			displayHighScore ();
+			displayHighScore();
 			break;
 
 		default:
@@ -252,6 +264,11 @@ void Game::handleMenuEvents(sf::Event& event)
 			std::cout << "Scores Button Clicked \n";
 			game_state = GameState::SCORES;
 		}
+		else if (this->ui->credits_button_outline.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePosition)))
+		{
+			std::cout << "Credits Button Clicked \n";
+			game_state = GameState::Credits;
+		}
 	}
 }
 
@@ -274,7 +291,7 @@ void Game::handleGameEvents(sf::Event& event)
 	if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
 	{
 		std::cout << "Pause / Exit Pressed \n";
-		
+
 		game_state = GameState::Name_Input;
 
 	}
@@ -330,9 +347,9 @@ void Game::handlescoreevents(sf::Event& event)
 	}
 
 }
-		
 
-	
+
+
 
 int Game::getpoints()
 {
@@ -370,7 +387,7 @@ void Game::updatelives() {
 		this->game_state = GameState::GAME_OVER;
 
 	// Calculate bottom center position
-	float posX = desktopMode.width / 2.f - this->player->getBounds().width ; // Center horizontally
+	float posX = desktopMode.width / 2.f - this->player->getBounds().width; // Center horizontally
 	float posY = desktopMode.height - this->player->getBounds().height - 100.f;    // Position slightly above the bottom
 
 	// Set player's position to the bottom center
@@ -395,9 +412,9 @@ void Game::updatePollEvents()
 
 			if (e.key.code == sf::Keyboard::F)
 			{
-			std::cout << "F key pressed, toggling fullscreen.\n";
-			handleResize();
-		    }
+				std::cout << "F key pressed, toggling fullscreen.\n";
+				handleResize();
+			}
 		}
 		else if (e.type == sf::Event::Resized)
 		{
@@ -467,9 +484,9 @@ void Game::handleResize()
 }
 
 
-	
 
-	
+
+
 
 
 
@@ -489,8 +506,8 @@ void Game::updateInput()
 	// Player shooting
 	if ((sf::Mouse::isButtonPressed(sf::Mouse::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) && this->player->canAttack())
 	{
-		this->bullets.push_back(new Bullet(this->textures["BULLET"], this->player->getPos().x + 30, this->player->getPos().y, 0.f, -1.f, 3.f*level, 2*level,this->level));
-		
+		this->bullets.push_back(new Bullet(this->textures["BULLET"], this->player->getPos().x + 30, this->player->getPos().y, 0.f, -1.f, 3.f * level, 2 * level, this->level));
+
 	}
 	this->player->update(this->level);
 
@@ -564,7 +581,7 @@ void Game::updateEnemies() {
 	}
 
 	// Spawn the boss at level 5
-	if(this->level == 5 && !bossSpawned) {
+	if (this->level == 5 && !bossSpawned) {
 		// Add the new boss first
 		this->boss.push_back(new Enemy(
 			this->window->getSize().x / 2.f - 100.f,  // Adjust positioning as needed
@@ -607,6 +624,10 @@ void Game::updateEnemyBullets()
 			if (this->enemyBullets[i]->getBounds().intersects(this->player->getBounds())) {
 				this->player->losehp(enemyBullets[i]->getdamage());
 
+				if (this->player->getHp() <= 0) {
+					this->killSound.play();
+				}
+
 				delete this->enemyBullets[i];
 				this->enemyBullets.erase(this->enemyBullets.begin() + i);
 				--i;
@@ -640,6 +661,7 @@ void Game::updateEnemyBullets()
 	}
 
 }
+
 void Game::updateEnemiesCombat()
 {
 	// Iterate over enemies
@@ -653,6 +675,7 @@ void Game::updateEnemiesCombat()
 			if (this->bullets[k]->getBounds().intersects(this->enemies[i]->getBounds(false)))
 			{
 				std::cout << "Collision detected!" << std::endl;
+				this->killSound.play();  // Play sound when enemy is destroyed
 
 				this->points += this->enemies[i]->getPoints();
 				delete this->bullets[k];
@@ -667,6 +690,7 @@ void Game::updateEnemiesCombat()
 		// Check collision with player if enemy is still present
 		if (!enemy_removed && this->enemies[i]->getBounds(false).intersects(this->player->getBounds()))
 		{
+			this->killSound.play();  // Play sound when enemy is destroyed by collision
 			this->player->losehp(this->enemies[i]->getDamage());
 			delete this->enemies[i];
 			this->enemies.erase(this->enemies.begin() + i);
@@ -679,11 +703,11 @@ void Game::updateEnemiesCombat()
 		}
 	}
 
-	// Iterate over bosses
+	// Boss combat section
 	for (size_t j = 0; j < this->boss.size();)
 	{
 		bool boss_removed = false;
-		Enemy* boss = this->boss[j]; // Get the current boss
+		Enemy* boss = this->boss[j];
 
 		// Check collision with bullets for boss
 		for (size_t k = 0; k < this->bullets.size() && !boss_removed; ++k)
@@ -693,19 +717,14 @@ void Game::updateEnemiesCombat()
 				delete this->bullets[k];
 				this->bullets.erase(this->bullets.begin() + k);
 				boss->takeDamage(this->player->give_damage());
-				std::cout <<"damage" << this->player->give_damage();
+				std::cout << "damage" << this->player->give_damage();
 			}
-		}
-
-		// Check collision with player if boss is still present
-		if (!boss_removed && boss->getBounds(true).intersects(this->player->getBounds()))
-		{
-			this->player->losehp(boss->getDamage());
 		}
 
 		// If boss is defeated
 		if (boss->gethp() == 0)
 		{
+			this->killSound.play();  // Play sound when boss is destroyed
 			this->boss.erase(this->boss.begin() + j);
 			delete boss;
 			boss_removed = true;
@@ -745,7 +764,7 @@ void Game::updateStars()
 	levelSpeedMultiplier = std::min(3.f, 1.0f + this->level * 0.3f); // Minimum cooldown of 0.5s
 
 	for (auto& star : this->stars) {
-		star->update(levelSpeedMultiplier,*this->window);
+		star->update(levelSpeedMultiplier, *this->window);
 	}
 }
 
@@ -756,17 +775,17 @@ void Game::updateUI() {
 	{
 		this->game_state = GameState::GAME_OVER;
 	}
-	
+
 	//updatehearts
-	if (this->player->getHp() == 0) 
+	if (this->player->getHp() == 0)
 	{
 		this->updatelives();
 	}
 	float playerHealthPercent = (this->player->getHp() / this->player->getHpMax());
 
-	this->ui->updateHearts(this->getlives(),playerHealthPercent);
+	this->ui->updateHearts(this->getlives(), playerHealthPercent);
 
-	this->ui->updateHealthBar(playerHealthPercent, this->player->getPos().x + 16, this->player->getPos().y +120.f,sf::Color::Green);
+	this->ui->updateHealthBar(playerHealthPercent, this->player->getPos().x + 16, this->player->getPos().y + 120.f, sf::Color::Green);
 
 	if (!this->boss.empty()) {
 		Enemy* boss = this->boss.front();  // Assuming only one boss
@@ -791,7 +810,7 @@ void Game::updateUI() {
 	this->ui->updateScoreAndLevel(score, level, scorePosX, scorePosY);
 
 	// Check if the player's HP is zero to end the game
-	
+
 }
 
 void Game::saveScore() {
@@ -886,17 +905,17 @@ void Game::update()
 	this->updateStars();
 
 	if (this->getlives() != 0 && game_state == GameState::GAME) {
-		
+
 		this->updateInput();
 		this->player->updateAttack(this->getlevel());
-		
+
 		this->updateBullets();
 		this->updateEnemies();
 		this->updateEnemiesCombat();
 		this->updateEnemyBullets();
 		this->updateUI();
 	}
-	
+
 
 
 }
@@ -906,36 +925,36 @@ void Game::renderUI()
 	this->ui->render(this->window);
 }
 void Game::render() {
-    // Render player
-    this->player->render(*this->window);
+	// Render player
+	this->player->render(*this->window);
 
-    // Render player bullets
-    for (auto* bullet : this->bullets)
-        bullet->render(this->window);
+	// Render player bullets
+	for (auto* bullet : this->bullets)
+		bullet->render(this->window);
 
-    // Render enemy minions
-    for (auto* enemy : this->enemies)
-        enemy->renderminion(this->window);
+	// Render enemy minions
+	for (auto* enemy : this->enemies)
+		enemy->renderminion(this->window);
 
-    // Render enemy bullets
-    for (auto* bullet : this->enemyBullets)
-        bullet->render(this->window);
+	// Render enemy bullets
+	for (auto* bullet : this->enemyBullets)
+		bullet->render(this->window);
 
-    // Render boss if present
-    if (!this->boss.empty()) {
-        for (auto* b : this->boss)
-            b->renderboss(this->window);
-    }
+	// Render boss if present
+	if (!this->boss.empty()) {
+		for (auto* b : this->boss)
+			b->renderboss(this->window);
+	}
 
-    // Render UI components like health bars, score, and other details
-    this->renderUI();
+	// Render UI components like health bars, score, and other details
+	this->renderUI();
 }
 
 
 void Game::resetgame() {
 	window->clear();
 	this->player->resetstats();  // Reset player stats like health
-	this->player->setpos(this->window->getSize().x / 2.f-this->player->getBounds().width, this->window->getSize().y -this->player->getBounds().height - 20.f);
+	this->player->setpos(this->window->getSize().x / 2.f - this->player->getBounds().width, this->window->getSize().y - this->player->getBounds().height - 20.f);
 	this->level = 1;
 	this->lives = 3;
 	this->points = 0;

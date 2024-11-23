@@ -2,6 +2,7 @@
 #define UI_HPP
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <iostream>
 class UI {
@@ -32,6 +33,9 @@ public:    //Gamestate
     // variables for instructions elements
     sf::Text how_to_play_title;
     sf::Text objectives;
+
+    sf::SoundBuffer clickBuffer;
+    sf::Sound clickSound;
 
     // functions for menu
     void update();
@@ -67,6 +71,12 @@ public:    //Gamestate
     sf::Texture exptext;
     sf::Sprite explosion;
 
+    sf::Text music_button;
+	sf::RectangleShape music_button_outline;
+
+    sf::Music backgroundMusic;   // To hold background music
+	bool isMusicOn= true;			  // To keep track of music state
+
 public:
     // Constructor initializes window reference
     explicit UI(sf::RenderWindow& win);
@@ -87,6 +97,21 @@ public:
 
     // Function to render UI components
     void render(sf::RenderTarget* target);
+
+    void playClickSound();
+    void initializeSounds();
+
+
+    sf::Text credits_button;
+    sf::RectangleShape credits_button_outline;
+    sf::Text credits_title;
+    sf::Text credits_text;
+
+    
+    void set_credits_objects(int width, int height);
+    void load_credits();
+    
+  
 };
 
 #endif // UI_HPP
