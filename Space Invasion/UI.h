@@ -5,12 +5,22 @@
 #include <SFML/Audio.hpp>
 #include <vector>
 #include <iostream>
+#include <SFML/Audio.hpp>
+
 class UI {
+    
 public:    //Gamestate
    
     sf::RenderWindow& window;
     sf::Clock clock;
     int finalscore;
+     bool ButtonClicked;
+
+    //game sounds
+    sf::SoundBuffer clickBuffer;
+    sf::Sound clickSound;
+
+
 
     //for game window
     sf::Text title;
@@ -29,6 +39,11 @@ public:    //Gamestate
     sf::RectangleShape Replay_outline;
     sf::Text Close;
     sf::RectangleShape Close_outline;
+    sf::Text Restart;
+    sf::Text pause;
+    sf::Text Instructions;
+    sf::Text resume;
+    sf::Text exit;
 
     // variables for instructions elements
     sf::Text how_to_play_title;
@@ -52,6 +67,7 @@ public:    //Gamestate
     void load_score();
     void load_end_page();
     void load_game();
+    void pause_page();
 
     // GUI components
    
@@ -63,19 +79,22 @@ public:    //Gamestate
     sf::RectangleShape bosshpbar;
     sf::RectangleShape bosshpback;
 
-
+    sf::Clock animationClock; // To control frame timing
+    std::vector<sf::Sprite> explosions;  // Vector to store active explosions
+    int currentFrame = 0;  // Track the current frame of the animation
+    const int totalFrames = 10;  // Total frames in the explosion sprite sheet
     sf::Sprite hearts[3];
     sf::Texture heartTexture;
     sf::RectangleShape livesContainer;
     sf::RectangleShape scoreLevelContainer;
     sf::Texture exptext;
-    sf::Sprite explosion;
+    sf::Sprite exp;
 
     sf::Text music_button;
-	sf::RectangleShape music_button_outline;
+    sf::RectangleShape music_button_outline;
 
     sf::Music backgroundMusic;   // To hold background music
-	bool isMusicOn= true;			  // To keep track of music state
+    bool isMusicOn = true;			  // To keep track of music state
 
 public:
     // Constructor initializes window reference
@@ -88,7 +107,9 @@ public:
     void updateHealthBar(float healthPercent, float posx, float posy, sf::Color color);
     void updateHearts(int lives,float healthPercent);
     void updatebossHealthBar(float healthPercent, float posx, float posy, sf::Color color);
-    void updateexplosion(float posx, float posy);
+    void updateExplosion(float posx, float posy);
+    void updateAllExplosions(sf::RenderWindow& window);
+
 
     void updateScoreAndLevel(int score, int level,float x, float y);
     void endgame();
@@ -97,7 +118,6 @@ public:
 
     // Function to render UI components
     void render(sf::RenderTarget* target);
-
     void playClickSound();
     void initializeSounds();
 
@@ -107,11 +127,10 @@ public:
     sf::Text credits_title;
     sf::Text credits_text;
 
-    
+
     void set_credits_objects(int width, int height);
     void load_credits();
-    
-  
+
 };
 
 #endif // UI_HPP
